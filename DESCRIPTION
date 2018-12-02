@@ -1,0 +1,21 @@
+Package: INDIeAnalyticsIncremental
+Title: The API to incrementally update the aggregate objects for INDIeAnalytics
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "First",
+           family = "Last",
+           role = c("aut", "cre"),
+           email = "first.last@example.com")
+Description: Contains the mail function generate_aggregate for the API to be served by a Docker container. It incrementally updates the aggregate objects to be used by the Shiny dashboard for INDIeAnalytics. To do so, it defines intermediate objects that are incrementally updated with new events' information, and transforms the intermediate objects into aggregate objects to be displayed in the dashboard.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 6.1.1
+Imports: 
+    dplyr,
+    tibble,
+    lubridate,
+    tidyr,
+    purrr,
+    jsonlite
