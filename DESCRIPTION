@@ -6,7 +6,7 @@ Authors@R:
            family = "Last",
            role = c("aut", "cre"),
            email = "first.last@example.com")
-Description: Contains the mail function generate_aggregate for the API to be served by a Docker container. It incrementally updates the aggregate objects to be used by the Shiny dashboard for INDIeAnalytics. To do so, it defines intermediate objects that are incrementally updated with new events' information, and transforms the intermediate objects into aggregate objects to be displayed in the dashboard.
+Description: Contains the main function generate_aggregate for the API to be served by a Docker container. It incrementally updates the aggregate objects to be used by the Shiny dashboard for INDIeAnalytics. To do so, it defines intermediate objects that are incrementally updated with new events' information, and transforms the intermediate objects into aggregate objects to be displayed in the dashboard.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
