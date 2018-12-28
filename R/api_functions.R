@@ -63,19 +63,20 @@ generate_aggregate<- function(json_events_intermediate){
   ## json. It requires the json_events_intermediate to contain new_events and
   ## intermediate. The output is the aggregate list
   ## ------------------------------------------------------------------------------
-  list_events_intermediate <- jsonlite::fromJSON(json_events_intermediate)
-  new_events <- prepare_events(
-    events = list_events_intermediate$new_events,
-    intermediate = list_events_intermediate$intermediate
-  )
-  updated_intermediate <- update_intermediate(
-    intermediate = list_events_intermediate$intermediate,
-    new_events = new_events
-  )
-  list(
-    updated_intermediate = updated_intermediate,
-    aggregate = intermediate2aggregate(updated_intermediate)
-  )
+    list_events_intermediate <- jsonlite::fromJSON(json_events_intermediate)
+    intermediate <- prepare_intermediate(list_events_intermediate$intermediate)
+    new_events <- prepare_events(
+        events = list_events_intermediate$new_events,
+        intermediate = intermediate
+    )
+    updated_intermediate <- update_intermediate(
+        intermediate = intermediate,
+        new_events = new_events
+    )
+    list(
+        updated_intermediate = updated_intermediate,
+        aggregate = intermediate2aggregate(updated_intermediate)
+    )
 }
 
 

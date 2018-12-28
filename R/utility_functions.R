@@ -50,7 +50,35 @@ prepare_path <- function(df){
   )
 }
 
-
+prepare_intermediate <- function(intermediate){
+    ## sets the type of columns associated to objects in intermediate
+    if (length(intermediate$last_event) > 0){
+        intermediate$last_event <-
+            intermediate$last_event %>%
+            dplyr::mutate(
+                       date_last_event = lubridate::ymd_hms(date_last_event),
+                       time_spent = as.double(time_spent),
+                       percentage = as.double(percentage)
+                   )
+    }
+    if (!is.null(intermediate$user_url_time)){
+        intermediate$user_url_time <-
+            intermediate$user_url_time %>%
+            dplyr::mutate_at(
+                       dplyr::vars(percentage:time_spent),
+                       .funs = dplyr::funs(as.double)
+                   )
+    }
+    if (!is.null(intermediate$daily_effort)){
+        intermediate$daily_effort <-
+            intermediate$daily_effort %>%
+            dplyr::mutate(
+                       day = lubridate::ymd(day, tz = "UTC"),
+                       time_spent = as.double(time_spent)
+                   )
+    }
+    intermediate
+}
 
 prepare_events <- function(events, intermediate = NULL){
   ## manipulates events as read from json, adding duration etc...
@@ -61,7 +89,7 @@ prepare_events <- function(events, intermediate = NULL){
   ## The column duration_session is added, which indicates the duration of the
   ## session the event belongs to
   ##
-  ##  browser()
+#   browser()
   events <- events %>%
     dplyr::mutate(
       percentage = as.numeric(percentage),
@@ -83,20 +111,13 @@ prepare_events <- function(events, intermediate = NULL){
   ##
   if (length(intermediate$last_event) > 0 &
       sum(events$session == 0) > 0) {
-    intermediate$last_event <-
-      intermediate$last_event %>%
-      dplyr::mutate(
-        date_last_event = lubridate::ymd_hms(date_last_event),
-        time_spent = as.double(time_spent),
-        percentage = as.double(percentage)
-      )
-    interrupted_sessions_last_event <- events %>%
-      dplyr::filter(session == 0) %>%
-      dplyr::select(user, url) %>%
-      dplyr::distinct() %>%
-      dplyr::left_join(intermediate$last_event) %>%
-      dplyr::rename(date = date_last_event) %>%
-      dplyr::mutate(type = "LoggedIn")
+      interrupted_sessions_last_event <- events %>%
+          dplyr::filter(session == 0) %>%
+          dplyr::select(user, url) %>%
+          dplyr::distinct() %>%
+          dplyr::left_join(intermediate$last_event) %>%
+          dplyr::rename(date = date_last_event) %>%
+          dplyr::mutate(type = "LoggedIn")
     ## problema con el tipo de date, que era date_last_event
     events <- dplyr::bind_rows(
       interrupted_sessions_last_event,
