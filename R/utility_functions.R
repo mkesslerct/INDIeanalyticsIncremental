@@ -62,6 +62,7 @@ prepare_intermediate <- function(intermediate){
                    )
     }
     if (!is.null(intermediate$user_url_time)){
+      browser()
         intermediate$user_url_time <-
             intermediate$user_url_time %>%
             dplyr::mutate_at(

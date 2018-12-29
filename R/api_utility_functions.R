@@ -31,15 +31,6 @@ update_intermediate <- function(intermediate, new_events){
   ## the last registered event
   ##
   ## ------------------------------------------------------------------------------
-  if (!is.null(intermediate$last_event)){
-    intermediate$last_event <-
-      intermediate$last_event %>%
-      dplyr::mutate(
-        date_last_event = lubridate::ymd_hms(date_last_event),
-        time_spent = as.double(time_spent),
-        percentage = as.double(percentage)
-      )
-  }
   intermediate$last_event <-
     dplyr::bind_rows(
       intermediate$last_event,
@@ -136,7 +127,8 @@ update_intermediate <- function(intermediate, new_events){
     dplyr::summarise(
       time_to_achieve = min(time_spent),
       time_spent = max(time_spent)
-    )
+      )
+    browser()
   if (!is.null(intermediate$user_url_time)){
     intermediate$user_url_time <-
       intermediate$user_url_time %>%
@@ -162,14 +154,6 @@ update_intermediate <- function(intermediate, new_events){
   ##
   ## -------------------------------------------------------------------------
   ##       browser()
-  if (!is.null(intermediate$daily_effort)){
-    intermediate$daily_effort <-
-      intermediate$daily_effort %>%
-      dplyr::mutate(
-        day = lubridate::ymd(day, tz = "UTC"),
-        time_spent = as.double(time_spent)
-      )
-  }
 
   logins <- new_events %>%
     dplyr::filter(type == "LoggedIn")
