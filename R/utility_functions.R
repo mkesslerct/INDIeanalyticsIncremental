@@ -32,7 +32,6 @@ colors_q <- setNames(
   c("q1", "q2", "q3")
 )
 prepare_path <- function(df){
-  ##    browser()
   list(
     data = purrr::pmap(
       list(df$quartile, df$percentage, df$n_q, df$variable),
@@ -62,8 +61,7 @@ prepare_intermediate <- function(intermediate){
                    )
     }
     if (!is.null(intermediate$user_url_time)){
-      browser()
-        intermediate$user_url_time <-
+          intermediate$user_url_time <-
             intermediate$user_url_time %>%
             dplyr::mutate_at(
                        dplyr::vars(percentage:time_spent),
@@ -89,9 +87,8 @@ prepare_events <- function(events, intermediate = NULL){
   ## the time spent by the user in the url, up to the current event
   ## The column duration_session is added, which indicates the duration of the
   ## session the event belongs to
-  ##
-#   browser()
-  events <- events %>%
+    ##
+    events <- events %>%
     dplyr::mutate(
       percentage = as.numeric(percentage),
       date = lubridate::mdy_hms(date)
@@ -114,7 +111,7 @@ prepare_events <- function(events, intermediate = NULL){
       sum(events$session == 0) > 0) {
       interrupted_sessions_last_event <- events %>%
           dplyr::filter(session == 0) %>%
-          dplyr::select(user, url) %>%
+          dplyr::select(user, url, name, email, title, profile, session) %>%
           dplyr::distinct() %>%
           dplyr::left_join(intermediate$last_event) %>%
           dplyr::rename(date = date_last_event) %>%

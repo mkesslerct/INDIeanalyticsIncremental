@@ -128,7 +128,6 @@ update_intermediate <- function(intermediate, new_events){
       time_to_achieve = min(time_spent),
       time_spent = max(time_spent)
       )
-    browser()
   if (!is.null(intermediate$user_url_time)){
     intermediate$user_url_time <-
       intermediate$user_url_time %>%
@@ -153,7 +152,6 @@ update_intermediate <- function(intermediate, new_events){
   ##   daily_effort: dataframe with, for each user, the time spent daily
   ##
   ## -------------------------------------------------------------------------
-  ##       browser()
 
   logins <- new_events %>%
     dplyr::filter(type == "LoggedIn")
@@ -175,7 +173,7 @@ update_intermediate <- function(intermediate, new_events){
     day = as.Date(character()),
     duration = as.difftime(numeric(), units = "secs")
   )
-
+##    browser()
   if (sum(!logins$requires_split) > 0){
 
     daily_effort_no_split <- logins %>%
