@@ -54,17 +54,18 @@ update_intermediate <- function(intermediate, new_events){
 
   ## visited_units is a df which contains url and its "current" title, which
   ## is the "latest" title (the title can be changed by the teacher along
-  ## the event registration
+    ## the event registration
+#    browser()
   intermediate$visited_units <-
     dplyr::bind_rows(
-      intermediate$visited_units,
-      new_events %>%
-        dplyr::arrange(date) %>%
-        dplyr::select(url, title)
-    ) %>%
+               intermediate$visited_units,
+               new_events %>%
+               dplyr::arrange(date) %>%
+               dplyr::select(url, current_title = title)
+           ) %>%
     dplyr::group_by(url) %>%
-    dplyr::summarise(current_title = tail(title, 1L))
-  ## users is a dataframe which contains users that have interacted with the platform
+    dplyr::summarise(current_title = tail(current_title, 1L))
+    ## users is a dataframe which contains users that have interacted with the platform
   intermediate$users <-  dplyr::bind_rows(
     intermediate$users,
     new_events %>%
@@ -77,28 +78,28 @@ update_intermediate <- function(intermediate, new_events){
   ## have_visited, with the users' id that have visited this url, and a list
   ## column have_completed, with the users' id that have completed the url
   ## -------------------------------------------------------------------------
-  max_percentages <- new_events %>%
-    dplyr::select(url, user, percentage) %>%
-    dplyr::group_by(url, user) %>%
-    dplyr::summarise(max_percentage = max(percentage))
-  visitors_new <- max_percentages %>%
-    dplyr::group_by(url) %>%
-    tidyr::nest() %>%
-    dplyr::mutate(
-      have_visited = purrr::map(
-        data,
-        ~ .x$user
-      ),
-      have_completed = purrr::map(
-        data,
-        ~ dplyr::filter(.x, max_percentage >= 100)$user
-      )
-    ) %>%
-    dplyr::select(- data)
-  intermediate$visitors <- dplyr::bind_rows(
-    intermediate$visitors,
-    visitors_new
-  ) %>%
+    max_percentages <- new_events %>%
+        dplyr::select(url, user, percentage) %>%
+        dplyr::group_by(url, user) %>%
+        dplyr::summarise(max_percentage = max(percentage))
+    visitors_new <- max_percentages %>%
+        dplyr::group_by(url) %>%
+        tidyr::nest() %>%
+        dplyr::mutate(
+                   have_visited = purrr::map(
+                                             data,
+                                             ~ .x$user
+                                         ),
+                   have_completed = purrr::map(
+                                               data,
+                                               ~ dplyr::filter(.x, max_percentage >= 100)$user
+                                           )
+               ) %>%
+        dplyr::select(- data)
+    intermediate$visitors <- dplyr::bind_rows(
+                                        intermediate$visitors,
+                                        visitors_new
+                                    ) %>%
     dplyr::group_by(url) %>%
     tidyr::nest(.) %>%
     dplyr::mutate(
@@ -168,7 +169,7 @@ update_intermediate <- function(intermediate, new_events){
   daily_effort_empty <- tibble::tibble(
     user = character(),
     date = as.Date(character()),
-    session = integer(),
+ #   session = integer(),
     duration_session = numeric(),
     day = as.Date(character()),
     duration = as.difftime(numeric(), units = "secs")
@@ -218,6 +219,7 @@ update_intermediate <- function(intermediate, new_events){
   } else {
     daily_effort_with_split <- daily_effort_empty
   }
+    browser()
   daily_effort <-
     rbind(
       daily_effort_no_split,
@@ -233,11 +235,10 @@ update_intermediate <- function(intermediate, new_events){
       intermediate$daily_effort,
       daily_effort
     ) %>%
-    dplyr::group_by(user, day) %>%
+    dplyr::group_by(user, email, name, day) %>%
     dplyr::summarise(
       time_spent = as.numeric(sum(time_spent))
-    ) %>%
-    dplyr::left_join(intermediate$users)
+    )
 
   ##
   ## -------------------------------------------------------------------------
@@ -284,7 +285,7 @@ update_intermediate <- function(intermediate, new_events){
 intermediate2aggregate <- function(intermediate){
   aggregate <- list()
   ##
-  aggregate$number_visited_units <- length(intermediate$visited_units)
+  aggregate$number_visited_units <- length(intermediate$visited_units$url)
   ##
   aggregate$number_users <- length(intermediate$users$user)
   ## still to be done

@@ -24,19 +24,22 @@
 ##' - url,
 ##' - title,
 ##' - profile\cr
+##'  
 ##'  and has the following structure:\cr
 ##'  \\{"user":"22","name":"John Doe","title":"Unit 1: Phrasal verbs", ...\\}\cr
 ##' The \code{"intermediate"} json string is a object (set of name/value pairs),
 ##' the names are "last_event", "visited_units", "users", "visitors",
 ##' "user_url_time" and "daily_effort".\cr
 ##' The function returns a list with two elements:\cr
-##' \code{intermediate} is a list that contains the following objects\cr
+##'
+##'  \code{intermediate} is a list that contains the following objects\cr
 ##' - \code{"last_event"}
 ##' - \code{"visited_units"}
 ##' - \code{"users"}
 ##' - \code{"visitors"}
 ##' - \code{"user_url_time"}
 ##' - \code{"daily_effort"}
+##' 
 ##' \code{aggregate} which is a list that contains the following objects
 ##' - \code{"number_visited_units"}
 ##' - \code{"number_users"}
