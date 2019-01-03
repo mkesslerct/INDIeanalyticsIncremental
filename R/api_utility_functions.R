@@ -55,7 +55,6 @@ update_intermediate <- function(intermediate, new_events){
   ## visited_units is a df which contains url and its "current" title, which
   ## is the "latest" title (the title can be changed by the teacher along
     ## the event registration
-#    browser()
   intermediate$visited_units <-
     dplyr::bind_rows(
                intermediate$visited_units,
@@ -174,7 +173,6 @@ update_intermediate <- function(intermediate, new_events){
     day = as.Date(character()),
     duration = as.difftime(numeric(), units = "secs")
   )
-##    browser()
   if (sum(!logins$requires_split) > 0){
 
     daily_effort_no_split <- logins %>%
@@ -219,7 +217,6 @@ update_intermediate <- function(intermediate, new_events){
   } else {
     daily_effort_with_split <- daily_effort_empty
   }
-    browser()
   daily_effort <-
     rbind(
       daily_effort_no_split,
@@ -363,7 +360,10 @@ intermediate2aggregate <- function(intermediate){
       key  = "url",
       value = "maxpercentage"
     )
-  names(aggregate$percentage_user_wide) <- lookup[names(aggregate$percentage_user_wide)]
+  names(aggregate$percentage_user_wide) <-
+      lookup[names(aggregate$percentage_user_wide)]
+  aggregate$percentage_user_wide <- aggregate$percentage_user_wide %>%
+      left_join(aggregate$users) %>% select(user, email, name, everything())
 
 
   ## ------------------------------------------------------------------------------
@@ -380,6 +380,8 @@ intermediate2aggregate <- function(intermediate){
       value = "time_url"
     )
   names(aggregate$time_user_wide) <- lookup[names(aggregate$time_user_wide)]
+  aggregate$time_user_wide <- aggregate$time_user_wide %>%
+      left_join(aggregate$users) %>% select(user, email, name, everything())
   ## -------------------------------------------------------------------------
   ##
   ## objectives_quartiles: df
