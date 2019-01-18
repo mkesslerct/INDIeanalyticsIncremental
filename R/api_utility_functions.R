@@ -368,7 +368,7 @@ intermediate2aggregate <- function(intermediate){
   names(aggregate$percentage_user_wide) <-
       lookup[names(aggregate$percentage_user_wide)]
   aggregate$percentage_user_wide <- aggregate$percentage_user_wide %>%
-      left_join(aggregate$users) %>% select(user, email, name, everything())
+      dplyr::left_join(aggregate$users) %>% dplyr::select(user, email, name, dplyr::everything())
 
 
   ## ------------------------------------------------------------------------------
@@ -386,7 +386,7 @@ intermediate2aggregate <- function(intermediate){
     )
   names(aggregate$time_user_wide) <- lookup[names(aggregate$time_user_wide)]
   aggregate$time_user_wide <- aggregate$time_user_wide %>%
-      left_join(aggregate$users) %>% select(user, email, name, everything())
+      dplyr::left_join(aggregate$users) %>% dplyr::select(user, email, name, dplyr::everything())
   ## -------------------------------------------------------------------------
   ##
   ## objectives_quartiles: df
