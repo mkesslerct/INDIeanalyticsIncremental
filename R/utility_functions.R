@@ -186,3 +186,260 @@ prepare_events <- function(events, intermediate = NULL){
     )
 
 }
+
+## ------------------------------------------------------------------------------
+##
+## For video analytics
+##
+## ------------------------------------------------------------------------------
+
+prepare_video_notes <- function(notes.column){
+        empty_row <- dplyr::tibble(
+        Type = character(),
+        Position = character(),
+        Duration = character(),
+        Offset = character()
+    )
+    purrr::map(
+        notes.column,
+        ~ dplyr::bind_rows(empty_row,
+                jsonlite::fromJSON(.x)$video) %>%
+            dplyr::transmute(
+                       action_type = Type,
+                       position = as.numeric(Position),
+                       duration = as.numeric(Duration),
+                       offset = Offset
+                   )
+    )
+}
+
+generate_played <- function(duration, slot_width){
+    purrr::map2(
+               duration,
+               slot_width,
+               ~ rep(0, ceiling(.x / .y))
+               )
+    }
+generate_last_position <- function(duration, slot_width){
+    purrr::map2(
+               duration,
+               slot_width,
+              ~ .y + seq(0, .x, .y)
+              )
+}
+## Note that slots are seq(0, duration, by = slot_width)
+get_slot <- function(position_column, slot_width){
+    (position_column %/% slot_width) + 1
+}
+
+get_element_slot <- function(list_column, position_column, slot_width){
+    purrr::pmap_dbl(
+               list(list_column, position_column, slot_width),
+               ~ ..1[get_slot(..2, ..3)]
+               )
+}
+
+
+update_intermediate_videos <- function(intermediate, new_events, slot_width_value = 2){
+    ## intermediate is a list, new__events a dataframe, which has already been manipulated
+    ## with prepare_events.
+    ## slot_width must be the same for all events associated to a given
+    ## video (url, element). Ideally, it should never change.
+
+    if (!(nrow(new_events) > 0 &&
+           ("notes" %in% names(new_events)) &&
+             sum(grepl('\\"video\\"',
+                       new_events$notes,
+                       ignore.case = TRUE)) > 0)){
+        return(intermediate$videos)
+    } else {
+        if(is.null(intermediate$videos)) intermediate$videos <- list()
+        new_events_video <- new_events %>%
+            dplyr::filter(grepl('\\"video\\"', notes, ignore.case = TRUE)) %>%
+            dplyr::mutate( notes = prepare_video_notes(notes)) %>%
+            tidyr::unnest(notes)
+        ## ---------------------------------------------------------------------
+        ##
+        ## For each video, characterized by url and element, we set the slot_width.
+        ## If ath url and element appear in intermediate$videos, then the value of
+        ## slot_width should  be respected, otherwise, it it set to the value of
+        ## slot_width given aa argument of the function.
+        ##
+        ## ------------------------------------------------------------------------
+        new_slot_widths <-
+            new_events_video %>%
+            dplyr::select(., url, element) %>%
+            dplyr::distinct(.) %>%
+            dplyr::mutate(slot_width = slot_width_value)
+
+        if(!is.null(intermediate$videos$slot_width.df)){
+            new_slot_widths <- new_slot_widths %>%
+                dplyr::anti_join(intermediate$videos$slot_width.df)
+        }
+        intermediate$videos$slot_width.df <- dplyr::bind_rows(
+            intermediate$videos$slot_width.df,
+            new_slot_widths
+            )
+        ## add the slot_width to all new_events_video
+        new_events_video <- new_events_video %>%
+            dplyr::left_join(intermediate$videos$slot_width.df)
+        ## ---------------------------------------------------------------------
+        ##
+        ## Check user, url, and video( = element) which do not appear in
+        ## intermediate and generate incialized vector played and last_position
+        ##
+        ## ------------------------------------------------------------------------------
+        new_videos <- new_events_video %>%
+            dplyr::select(., user, url, element, duration, slot_width) %>%
+            dplyr::distinct(.) %>%
+            dplyr::mutate(
+                       played = generate_played(duration, slot_width),
+                       last_position = generate_last_position(duration, slot_width)
+                   )
+        if (!is.null(intermediate$videos$user_summary)){
+            new_videos <- new_videos %>%
+                dplyr::anti_join(., intermediate$videos$user_summary %>%
+                                    dplyr::select(user, url, element))
+            }
+
+        ## names(new__videos): user, url, element, duration, slot_width,
+        ## played and last_position
+        intermediate$videos$user_summary <- dplyr::bind_rows(
+                                          intermediate$videos$user_summary,
+                                          new_videos
+                                      )
+        ## we have to update played and last_position
+        new_events_video <- new_events_video %>%
+            dplyr::mutate(slot = get_slot(position, slot_width))
+        new_events_video <- new_events_video %>%
+            dplyr::left_join(intermediate$videos$user_summary %>%
+                             dplyr::select(-duration, -slot_width)) %>%
+            dplyr::mutate(
+                       last_position_current = get_element_slot(
+                           last_position,
+                           position,
+                           slot_width
+                       ),
+                       played_current = get_element_slot(
+                           played,
+                           position,
+                           slot_width
+                       )
+                   )
+        new_events_video <- new_events_video %>%
+            dplyr::group_by(user, url, element, slot) %>%
+            dplyr::mutate(last_position_updated =  dplyr::lag(
+                                                              position,
+                                                              1,
+                                                              default = head(last_position_current, 1L)
+                                                          ),
+                          last_position_current =  dplyr::if_else(
+                                                              position < last_position_updated,
+                                                              position,
+                                                              last_position_updated)
+                          )
+        played_slots <- new_events_video %>%
+            dplyr::group_by(user, url, element, slot) %>%
+            dplyr::summarise(
+                       played_updated = sum(position - last_position_current) +
+                           head(played_current, 1L),
+                       last_position_updated = tail(position, 1L)
+                   ) %>%
+            dplyr::group_by(user, url, element) %>%
+            tidyr::nest(
+                       slot,
+                       played_updated,
+                       last_position_updated,
+                       .key = "played_last_position.df"
+                   )
+
+        iv_updated <- intermediate$videos$user_summary %>%
+            dplyr::inner_join(played_slots) %>%
+            dplyr::mutate(
+                       played = purrr::map2(
+                                           played,
+                                           played_last_position.df,
+                                           function(x, y) {
+                                               x[y$slot] <- y$played_updated
+                                               x
+                                           }
+                                       ),
+                       last_position = purrr::map2(
+                                                  last_position,
+                                                  played_last_position.df,
+                                                  function(x, y) {
+                                                      x[y$slot] <- y$last_position_updated
+                                                      x
+                                                  }
+                                              )
+                   ) %>%
+            dplyr::select(-played_last_position.df)
+        intermediate$videos$user_summary <-
+            dplyr::bind_rows(
+                       intermediate$videos$user_summary%>%
+                       dplyr::anti_join(played_slots),
+                       iv_updated
+                   )
+        intermediate$videos
+            }
+}
+
+
+
+## ------------------------------------------------------------------------------
+##
+## aggregate from intermediatevideo
+##
+## ------------------------------------------------------------------------------
+intermediate2aggregate_videos <- function(intermediate_videos){
+    ## assuming intermediate_videos is a list with two df:
+    ## slot_width.df, which holds for all url and element the slot width used
+    ##and user_summary.
+    ## element is assumed to identify the video within the url
+
+    if(is.null(intermediate_videos)) return(NULL)
+
+    generate_slot_width_vector<- function(slot_width, duration){
+        slot_vector <- rep(slot_width, duration %/% slot_width)
+        if ( ! duration %% slot_width == 0) {
+            slot_vector <- c(slot_vector,  duration %% slot_width)
+        }
+        slot_vector
+    }
+    intermediate_videos$user_summary$played <-
+        purrr::pmap(
+                   list(
+                       intermediate_videos$user_summary$played,
+                       intermediate_videos$user_summary$slot_width,
+                       intermediate_videos$user_summary$duration
+                   ),
+                   ~ round(..1 / generate_slot_width_vector(..2, ..3))
+               )
+
+    viz <- intermediate_videos$user_summary %>%
+        dplyr::group_by(url, element) %>%
+        dplyr::summarise(nusers = n(),
+                         viz_vector = list(purrr::reduce(
+                                                      played,
+                                                      function(x, y) {
+                                                          purrr::map2(
+                                                                     x,
+                                                                     y,
+                                                                     ~ c(.x, .y)
+                                                                 )
+                                                      }
+                                                  ))
+                         )
+    viz <- viz %>%
+        dplyr::mutate(
+                   total = purrr::map(
+                                      viz_vector,
+                                      ~ purrr::map_dbl( .x, ~ sum(.x /nusers))
+                                  ),
+                   frequencies = purrr::map(
+                                            viz_vector,
+                                            ~ purrr::map(.x, ~ as.list(table(.x)))
+                                        )
+               )
+    viz %>% dplyr::select(-viz_vector)
+}

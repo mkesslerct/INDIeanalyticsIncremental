@@ -236,7 +236,12 @@ update_intermediate <- function(intermediate, new_events){
     dplyr::summarise(
       time_spent = as.numeric(sum(time_spent))
     )
-
+    ## ------------------------------------------------------------------------------
+    ##
+    ## for video analytics
+    ##
+    ## ------------------------------------------------------------------------------
+    intermediate$videos <- update_intermediate_videos(intermediate, new_events)
   ##
   ## -------------------------------------------------------------------------
   ##
@@ -427,5 +432,11 @@ intermediate2aggregate <- function(intermediate){
   ## -------------------------------------------------------------------------
   aggregate$daily_effort <- intermediate$daily_effort
   ## -------------------------------------------------------------------------
+  ## ------------------------------------------------------------------------------
+  ##
+  ## video analytics
+  ##
+  ## ------------------------------------------------------------------------------
+  aggregate$videos <- intermediate2aggregate_videos(intermediate$videos)
   aggregate
 }
